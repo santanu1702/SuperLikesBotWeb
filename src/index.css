@@ -1,0 +1,740 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-lavender text-ink antialiased font-sans;
+    overflow-x: hidden;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  .dark body {
+    @apply bg-navy-950 text-slate-100;
+  }
+  section[id] {
+    scroll-margin-top: 5rem;
+  }
+  :focus-visible {
+    outline: 2px solid #7c3aed;
+    outline-offset: 3px;
+    border-radius: 12px;
+  }
+}
+
+@layer components {
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-brand-gradient;
+  }
+  .btn-gradient {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-gradient px-6 py-4 text-base font-bold text-white shadow-glow transition duration-200 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 active:scale-[0.98];
+  }
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-indigo-200 bg-white/70 px-6 py-4 text-base font-bold text-ink backdrop-blur transition duration-200 hover:-translate-y-0.5 hover:border-violet-400 hover:bg-white active:scale-[0.98];
+  }
+  .dark .btn-outline {
+    @apply border-white/15 bg-white/5 text-white hover:border-violet-400 hover:bg-white/10;
+  }
+  .card {
+    @apply rounded-[28px] border border-white bg-white shadow-card transition duration-300;
+  }
+  .dark .card {
+    @apply border-white/10 bg-navy-800/80;
+    box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.6);
+  }
+  .chip {
+    @apply inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-white/70 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-royal backdrop-blur;
+  }
+  .dark .chip {
+    @apply border-white/15 bg-white/5 text-blue-300;
+  }
+  .muted {
+    @apply text-slate2;
+  }
+  .dark .muted {
+    @apply text-slate-400;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Entrance animation: elements are visible by default; JS adds the reveal class. */
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Letter-by-letter text: letters start hidden and rise in one after another. */
+.split-text .ch {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.55em) scale(0.9);
+}
+.split-text.is-visible .ch {
+  animation: letter-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+@keyframes letter-in {
+  0% {
+    opacity: 0;
+    transform: translateY(0.55em) scale(0.9);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-0.08em) scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Animated brand gradient (blue -> indigo -> purple). Lighter stops in dark mode for contrast. */
+:root {
+  --flow-1: #2563eb;
+  --flow-2: #4f46e5;
+  --flow-3: #7c3aed;
+  --flow-time: 7s;
+}
+.dark {
+  --flow-1: #4f8bff;
+  --flow-2: #6d70ff;
+  --flow-3: #a370ff;
+}
+.split-text .ch-g {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  background-image: linear-gradient(90deg, var(--flow-1), var(--flow-2), var(--flow-3), var(--flow-2), var(--flow-1));
+  background-repeat: repeat-x;
+  background-size: 200% 100%;
+  /* resting position (also used when motion is reduced): a static gradient across the word */
+  background-position: calc(var(--g, 0) * 100%) 0;
+}
+/* Entrance animation + endless colour flow run together. Each letter is phase-shifted by its place
+   in the word (--g), so the colours appear to travel smoothly along the text. */
+.split-text.is-visible .ch-g:not(.ch-static) {
+  animation:
+    letter-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both,
+    gradient-flow var(--flow-time) linear infinite;
+  animation-delay: var(--d, 0ms), calc(var(--g, 0) * var(--flow-time) * -1);
+}
+.split-text .ch-static {
+  background-image: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  background-repeat: no-repeat;
+}
+@keyframes gradient-flow {
+  from {
+    background-position: 0% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Moving white reflection on gradient text.
+   Every gradient letter gets a duplicate of itself (::after, via data-ch) that is painted only by a
+   narrow white band. The band sweeps left -> right, letter after letter (--g = position in the word),
+   so the original gradient stays visible underneath. Pure CSS, no layout impact.
+------------------------------------------------------------------- */
+:root {
+  --shine-time: 4.6s; /* full cycle per letter */
+  --shine-span: 1.2s; /* time the shine needs to travel across one word */
+}
+.split-text .ch-g:not(.ch-static) {
+  position: relative;
+}
+.split-text .ch-g:not(.ch-static)::after {
+  content: attr(data-ch);
+  position: absolute;
+  inset: 0;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  background-image: linear-gradient(
+    105deg,
+    transparent 38%,
+    rgba(255, 255, 255, 0.55) 46%,
+    rgba(255, 255, 255, 0.98) 50%,
+    rgba(255, 255, 255, 0.55) 54%,
+    transparent 62%
+  );
+  background-repeat: no-repeat;
+  background-size: 300% 100%;
+  background-position: 100% 0; /* resting position: band is outside the letter */
+  pointer-events: none;
+}
+.dark .split-text .ch-g:not(.ch-static)::after {
+  background-image: linear-gradient(
+    105deg,
+    transparent 38%,
+    rgba(255, 255, 255, 0.5) 46%,
+    rgba(255, 255, 255, 0.92) 50%,
+    rgba(255, 255, 255, 0.5) 54%,
+    transparent 62%
+  );
+}
+.split-text.is-visible .ch-g:not(.ch-static)::after {
+  animation: text-shine var(--shine-time) ease-in-out infinite;
+  animation-delay: calc(var(--d, 0ms) + 900ms + var(--g, 0) * var(--shine-span));
+}
+@keyframes text-shine {
+  0% {
+    background-position: 100% 0;
+  }
+  38%,
+  100% {
+    background-position: 0% 0;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Glowing plan buttons: soft animated gradient halo behind the button (.btn-glow::before),
+   a light border + outer shadow and a shimmer sweeping across the face (.btn-shine::after).
+------------------------------------------------------------------- */
+.btn-glow {
+  position: relative;
+  border-radius: 1rem;
+}
+.btn-glow::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 1.2rem;
+  background-image: linear-gradient(90deg, var(--flow-1), var(--flow-3), var(--flow-2), var(--flow-1));
+  background-size: 300% 100%;
+  filter: blur(9px);
+  opacity: 0.45;
+  pointer-events: none;
+  animation:
+    glow-flow 7s linear infinite,
+    glow-pulse 2.8s ease-in-out infinite alternate;
+  transition: filter 0.25s ease;
+}
+.btn-glow:hover::before {
+  filter: blur(7px) brightness(1.25);
+}
+.btn-glow > a {
+  position: relative;
+  z-index: 1;
+  display: flex;
+}
+.btn-shine {
+  overflow: hidden;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.3),
+    0 12px 28px -8px rgba(99, 70, 237, 0.6);
+}
+.btn-shine > * {
+  position: relative;
+  z-index: 1;
+}
+.btn-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: linear-gradient(
+    110deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.34) 50%,
+    transparent 65%
+  );
+  background-repeat: no-repeat;
+  background-size: 250% 100%;
+  background-position: 100% 0;
+  pointer-events: none;
+  animation: btn-shine 3.8s ease-in-out infinite;
+}
+@keyframes btn-shine {
+  0% {
+    background-position: 100% 0;
+  }
+  45%,
+  100% {
+    background-position: 0% 0;
+  }
+}
+@keyframes glow-flow {
+  to {
+    background-position: 300% 0;
+  }
+}
+@keyframes glow-pulse {
+  from {
+    opacity: 0.32;
+  }
+  to {
+    opacity: 0.68;
+  }
+}
+
+/* ------------------------------------------------------------------
+   POPULAR badge: flowing gradient, pulsing glow and a moving light reflection.
+   (Position and size are unchanged.)
+------------------------------------------------------------------- */
+.popular-badge {
+  position: absolute;
+  overflow: hidden;
+  background-image: linear-gradient(110deg, #2563eb, #7c3aed, #4f46e5, #2563eb);
+  background-size: 300% 100%;
+  animation:
+    badge-flow 6s linear infinite,
+    badge-glow 2.6s ease-in-out infinite alternate;
+}
+.popular-badge::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 28%, rgba(255, 255, 255, 0.6) 50%, transparent 72%);
+  transform: translateX(-130%);
+  animation: badge-sheen 3.2s ease-in-out 0.6s infinite;
+  pointer-events: none;
+}
+.popular-badge > * {
+  position: relative;
+  z-index: 1;
+}
+@keyframes badge-flow {
+  to {
+    background-position: 300% 0;
+  }
+}
+@keyframes badge-glow {
+  from {
+    box-shadow: 0 0 6px 0 rgba(99, 102, 241, 0.45), 0 6px 14px -6px rgba(99, 70, 237, 0.55);
+  }
+  to {
+    box-shadow: 0 0 16px 3px rgba(139, 92, 246, 0.7), 0 8px 20px -6px rgba(99, 70, 237, 0.75);
+  }
+}
+@keyframes badge-sheen {
+  0%,
+  35% {
+    transform: translateX(-130%);
+  }
+  80%,
+  100% {
+    transform: translateX(130%);
+  }
+}
+
+/* ------------------------------------------------------------------
+   How It Works: final step highlight
+------------------------------------------------------------------- */
+.step-final {
+  background-image: linear-gradient(135deg, #2563eb 0%, #4f46e5 50%, #7c3aed 100%);
+  background-size: 200% 200%;
+  animation: step-bg 9s ease-in-out infinite alternate;
+}
+@keyframes step-bg {
+  to {
+    background-position: 100% 100%;
+  }
+}
+@keyframes step-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(1.55);
+    opacity: 0;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Tones for gradient text: hot (red/pink) and light (pale tint for use on the blue-purple cards)
+------------------------------------------------------------------- */
+.split-text .ch-hot {
+  --flow-1: #e11d48;
+  --flow-2: #f43f5e;
+  --flow-3: #fb7185;
+}
+.dark .split-text .ch-hot {
+  --flow-1: #fb7185;
+  --flow-2: #fda4af;
+  --flow-3: #f43f5e;
+}
+.split-text .ch-light,
+.dark .split-text .ch-light {
+  --flow-1: #c7d2fe;
+  --flow-2: #e0e7ff;
+  --flow-3: #f5d0fe;
+}
+
+/* ------------------------------------------------------------------
+   Premium hero: animated gradient backdrop, HUD ring, floating shapes
+------------------------------------------------------------------- */
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  z-index: -10;
+  pointer-events: none;
+  background-image: linear-gradient(120deg, rgba(37, 99, 235, 0.16), rgba(124, 58, 237, 0.18) 35%, rgba(244, 63, 94, 0.12) 65%, rgba(37, 99, 235, 0.16));
+  background-size: 300% 300%;
+  animation: hero-pan 16s ease-in-out infinite;
+  -webkit-mask-image: linear-gradient(#000 72%, transparent);
+  mask-image: linear-gradient(#000 72%, transparent);
+}
+.dark .hero-bg {
+  background-image: linear-gradient(120deg, rgba(37, 99, 235, 0.3), rgba(124, 58, 237, 0.32) 35%, rgba(244, 63, 94, 0.2) 65%, rgba(37, 99, 235, 0.3));
+}
+@keyframes hero-pan {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+.hud-ring {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: min(96vw, 780px);
+  height: auto;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.hud-spin,
+.hud-spin-rev {
+  transform-origin: 100px 100px;
+  animation: hud-rot 70s linear infinite;
+}
+.hud-spin-rev {
+  animation-direction: reverse;
+  animation-duration: 90s;
+}
+@keyframes hud-rot {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.shape {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--s);
+  height: var(--s);
+  opacity: var(--o, 0.7);
+  color: var(--c);
+  animation: shape-drift var(--d, 9s) ease-in-out var(--dl, 0s) infinite alternate;
+  will-change: transform;
+}
+.shape-diamond {
+  background: var(--c);
+  border-radius: 3px;
+  --r0: 45deg;
+  --r1: 135deg;
+}
+.shape-square {
+  border: 2px solid var(--c);
+  border-radius: 3px;
+  --r0: 10deg;
+  --r1: 80deg;
+}
+.shape-ring {
+  border: 2px solid var(--c);
+  border-radius: 999px;
+}
+.shape-dot {
+  background: var(--c);
+  border-radius: 999px;
+}
+.shape-poly svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+@keyframes shape-drift {
+  from {
+    transform: translate3d(0, 0, 0) rotate(var(--r0, 0deg));
+  }
+  to {
+    transform: translate3d(var(--dx, 12px), var(--dy, -22px), 0) rotate(var(--r1, 40deg));
+  }
+}
+@keyframes nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(4px);
+  }
+}
+.animate-nudge {
+  animation: nudge 1.6s ease-in-out infinite;
+}
+
+/* ------------------------------------------------------------------
+   Utilities used by the new sections
+------------------------------------------------------------------- */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* moving light reflection across a pill / label (keyframes shared with the POPULAR badge) */
+.sheen {
+  position: relative;
+  overflow: hidden;
+}
+.sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.6) 50%, transparent 70%);
+  transform: translateX(-130%);
+  animation: badge-sheen 3.6s ease-in-out var(--sheen-delay, 0s) infinite;
+  pointer-events: none;
+}
+
+/* card with an animated gradient border (rotating conic gradient behind a solid face) */
+.border-spin {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 1.4rem;
+}
+.border-spin::before {
+  content: "";
+  position: absolute;
+  inset: -150%;
+  z-index: -2;
+  background: conic-gradient(from 0deg, #2563eb, #7c3aed, #f43f5e, #2563eb);
+  animation: spin-slow 6s linear infinite;
+}
+.border-spin::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  z-index: -1;
+  border-radius: calc(1.4rem - 2px);
+  background: #ffffff;
+}
+.dark .border-spin::after {
+  background: #151d3d;
+}
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* See Plans button in the red/pink section */
+.btn-hot {
+  background-image: linear-gradient(135deg, #e11d48 0%, #f43f5e 55%, #7c3aed 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.3),
+    0 12px 28px -8px rgba(225, 29, 72, 0.6);
+}
+.btn-glow.hot::before {
+  background-image: linear-gradient(90deg, #e11d48, #f43f5e, #7c3aed, #e11d48);
+}
+
+/* ------------------------------------------------------------------
+   Live player profiles
+------------------------------------------------------------------- */
+.profile-card img {
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------------
+   Daily 4 AM delivery section
+------------------------------------------------------------------- */
+.delivery-card {
+  background: radial-gradient(120% 90% at 20% 0%, #fff1f4 0%, #fbd3dc 55%, #f7b6c4 100%);
+  border: 1px solid rgba(244, 63, 94, 0.2);
+  box-shadow: 0 30px 60px -30px rgba(225, 29, 72, 0.35);
+}
+.dark .delivery-card {
+  background: radial-gradient(120% 90% at 20% 0%, #3b1033 0%, #2a0f2e 45%, #130b24 100%);
+  border-color: rgba(244, 63, 94, 0.3);
+  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.7);
+}
+.delivery-aura {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle at 78% 55%, rgba(244, 63, 94, 0.28), transparent 45%);
+  animation: aura-breathe 6s ease-in-out infinite alternate;
+}
+@keyframes aura-breathe {
+  from {
+    opacity: 0.6;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.ring-glow {
+  position: absolute;
+  inset: 6%;
+  border-radius: 999px;
+  background: radial-gradient(circle, transparent 38%, rgba(244, 63, 94, 0.35) 52%, transparent 70%);
+  filter: blur(14px);
+  animation: aura-breathe 4s ease-in-out infinite alternate;
+}
+.warrior {
+  animation: warrior-float 6s ease-in-out infinite;
+}
+@keyframes warrior-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(1deg);
+  }
+}
+
+/* ------------------------------------------------------------------
+   Supported server globe panel (always dark so the glowing India stands out in both themes)
+------------------------------------------------------------------- */
+.globe-panel {
+  background: radial-gradient(circle at 50% 40%, #1a2350 0%, #0b1020 62%, #070a16 100%);
+  border: 1px solid rgba(124, 58, 237, 0.35);
+  box-shadow: 0 24px 50px -24px rgba(124, 58, 237, 0.55);
+}
+
+/* ------------------------------------------------------------------
+   How It Works: animated connectors that draw in when the card reveals
+------------------------------------------------------------------- */
+.step-conn {
+  border-radius: 999px;
+  background-image: repeating-linear-gradient(90deg, #2563eb 0 7px, #7c3aed 7px 14px, transparent 14px 20px);
+  background-size: 20px 100%;
+  opacity: 0.85;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.7s ease 0.4s;
+  animation: conn-flow 0.9s linear infinite;
+}
+.step-conn-y {
+  background-image: repeating-linear-gradient(180deg, #2563eb 0 7px, #7c3aed 7px 14px, transparent 14px 20px);
+  background-size: 100% 20px;
+  transform: scaleY(0);
+  transform-origin: center top;
+  animation-name: conn-flow-y;
+}
+li.is-visible > .step-conn {
+  transform: scale(1);
+}
+@keyframes conn-flow {
+  to {
+    background-position: 20px 0;
+  }
+}
+@keyframes conn-flow-y {
+  to {
+    background-position: 0 20px;
+  }
+}
+
+/* footer accent line */
+.footer-line {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background-image: linear-gradient(90deg, transparent, #2563eb, #7c3aed, #f43f5e, transparent);
+  background-size: 200% 100%;
+  animation: conn-flow-wide 8s linear infinite;
+}
+@keyframes conn-flow-wide {
+  to {
+    background-position: 200% 0;
+  }
+}
+
+/* touch devices: pressing a card or button gives the same lift feedback as hovering */
+@media (hover: none) {
+  .card:active {
+    transform: translateY(-4px) scale(0.99);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .split-text .ch {
+    opacity: 1;
+    transform: none;
+  }
+  .split-text.is-visible .ch-g:not(.ch-static),
+  .split-text.is-visible .ch-g:not(.ch-static)::after,
+  .btn-glow::before,
+  .btn-shine::after,
+  .popular-badge,
+  .popular-badge::after,
+  .step-final,
+  .step-ping,
+  .hero-bg,
+  .hud-spin,
+  .hud-spin-rev,
+  .shape,
+  .animate-nudge,
+  .sheen::after,
+  .border-spin::before,
+  .delivery-aura,
+  .ring-glow,
+  .warrior,
+  .step-conn,
+  .footer-line {
+    animation: none !important;
+  }
+  .sheen::after {
+    opacity: 0;
+  }
+  .step-conn {
+    transform: none !important;
+  }
+  .btn-shine::after,
+  .popular-badge::after,
+  .split-text .ch-g::after {
+    opacity: 0;
+  }
+  .btn-glow::before {
+    opacity: 0.45;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
